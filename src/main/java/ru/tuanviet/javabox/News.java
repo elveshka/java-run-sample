@@ -12,9 +12,21 @@ import java.util.concurrent.TimeUnit;
 
 public class News {
     private final String url;
+    private final Integer id;
     private final int timeOut;
-    private String title;
     private Integer score;
+
+    public String getResponseBody() {
+        return responseBody;
+    }
+
+    private String responseBody;
+
+    public Response getRequest() {
+        return response;
+    }
+
+    private Response response;
 
     public News(Integer id, int timeOut) {
         this.timeOut = timeOut;
@@ -22,20 +34,32 @@ public class News {
             throw new IllegalArgumentException();
         }
         url = "https://hacker-news.firebaseio.com/v0/item/" + id + ".json?print=pretty";
-
-        parseJsonToFields(sendRequest(id));
+        this.id = id;
     }
 
-    private Response sendRequest(Integer id) {
-        Request request = new Request.Builder()
-                .url(url).build();
+    public News(Integer id, int timeOut, String url) {
+        this.timeOut = timeOut;
+        if (id == null || id < 0) {
+            throw new IllegalArgumentException();
+        }
+        this.url = url + "/test";
+        this.id = id;
+        sendRequest();
+    }
+
+    public void execute() {
+        parseJsonToFields(response);
+    }
+
+    private void sendRequest() {
+        Request request = new Request.Builder().url(url).build();
         OkHttpClient client = new OkHttpClient.Builder()
                 .connectTimeout(timeOut, TimeUnit.MILLISECONDS)
                 .writeTimeout(timeOut, TimeUnit.MILLISECONDS)
                 .readTimeout(timeOut, TimeUnit.MILLISECONDS)
                 .build();
         try {
-            return client.newCall(request).execute();
+            response = client.newCall(request).execute();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -46,7 +70,8 @@ public class News {
         String body;
         NewsAttr attr;
         try {
-            body = Objects.requireNonNull(response.body()).string();
+            body = response.body().string();
+            responseBody = body;
             attr = mapper.readValue(body, NewsAttr.class);
         } catch (IOException e) {
             throw new RuntimeException(e);
