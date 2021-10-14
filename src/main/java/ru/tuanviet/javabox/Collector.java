@@ -10,7 +10,7 @@ public class Collector {
 
     public Collector(String str) {
         parseString(str);
-        for (String id: idsArray) {
+        for (String id : idsArray) {
             idsList.add(Integer.parseInt(id));
         }
     }

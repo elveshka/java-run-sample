@@ -5,18 +5,16 @@ import org.junit.Rule;
 import org.junit.Test;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
-import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.options;
 import static org.assertj.core.api.Assertions.assertThat;
 
 
 public class NewsTest {
-    News sutNews;
-    int timeOut = 3_000;
-
     @Rule
     public WireMockRule wireMockRule = new WireMockRule(
             options().dynamicPort());
+    News sutNews;
+    int timeOut = 3_000;
 
     @Test(expected = IllegalArgumentException.class)
     public void shouldThrowExceptionOnNull() {
@@ -36,10 +34,8 @@ public class NewsTest {
                 .willReturn(aResponse().withBodyFile("testUrl.json")));
 
         sutNews = new News(28850366, timeOut, wireMockRule.baseUrl());
-        System.out.println(sutNews.getResponseBody());
-        System.out.println(sutNews.getUrl());
-        System.out.println(sutNews.getRequest());
-//        sutNews.execute();
-//        assertThat(123).isEqualTo(sutNews.getScore());
+        sutNews.execute();
+        assertThat(123).isEqualTo(sutNews.getScore());
+        assertThat("AI predicts accident hot-spots from satellite imagery and GPS data").isEqualTo(sutNews.getTitle());
     }
 }

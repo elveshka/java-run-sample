@@ -11,40 +11,55 @@ import java.util.concurrent.TimeUnit;
 
 
 public class News {
-    private final String url;
-    private final Integer id;
-    private final int timeOut;
+    public static final int DEFAULT_TIMEOUT = 3_000;
+    private String url;
+    private Integer id;
+    private int timeOut;
     private Integer score;
+    private String link;
+    private String title;
+    private String responseBody;
+    private Response response;
+
+    public News() {
+    }
+
+    public News(Integer id, int timeOut) {
+        this.timeOut = timeOut;
+        this.id = id;
+
+        if (id == null || id < 0) {
+            throw new IllegalArgumentException();
+        }
+        url = "https://hacker-news.firebaseio.com/v0/item/" + id + ".json?print=pretty";
+        sendRequest();
+    }
+
+    public News(Integer id, int timeOut, String url) {
+        this.timeOut = timeOut;
+        this.id = id;
+
+        if (id == null || id < 0) {
+            throw new IllegalArgumentException();
+        }
+        this.url = url + "/test";
+        sendRequest();
+    }
+
+    public Integer getId() {
+        return id;
+    }
+
+    public void setId(Integer newId) {
+        id = newId;
+    }
 
     public String getResponseBody() {
         return responseBody;
     }
 
-    private String responseBody;
-
     public Response getRequest() {
         return response;
-    }
-
-    private Response response;
-
-    public News(Integer id, int timeOut) {
-        this.timeOut = timeOut;
-        if (id == null || id < 0) {
-            throw new IllegalArgumentException();
-        }
-        url = "https://hacker-news.firebaseio.com/v0/item/" + id + ".json?print=pretty";
-        this.id = id;
-    }
-
-    public News(Integer id, int timeOut, String url) {
-        this.timeOut = timeOut;
-        if (id == null || id < 0) {
-            throw new IllegalArgumentException();
-        }
-        this.url = url + "/test";
-        this.id = id;
-        sendRequest();
     }
 
     public void execute() {
@@ -67,16 +82,16 @@ public class News {
 
     private void parseJsonToFields(Response response) {
         ObjectMapper mapper = new ObjectMapper();
-        String body;
         NewsAttr attr;
         try {
-            body = response.body().string();
-            responseBody = body;
-            attr = mapper.readValue(body, NewsAttr.class);
+            responseBody = Objects.requireNonNull(response.body()).string();
+            attr = mapper.readValue(responseBody, NewsAttr.class);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+        this.title = attr.getTitle();
         this.score = Integer.parseInt(attr.getScore());
+        this.link = attr.getUrl();
     }
 
     public String getUrl() {
@@ -86,6 +101,26 @@ public class News {
     public int getScore() {
         return score;
     }
+
+    public void setScore(int newScore) {
+        score = newScore;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String newTitle) {
+        title = newTitle;
+    }
+
+    public String getLink() {
+        return link;
+    }
+
+    public void setLink(String newLink) {
+        link = newLink;
+    }
 }
 
 class NewsAttr {
@@ -94,6 +129,7 @@ class NewsAttr {
     private String id;
     private String[] kids;
     private String score;
+    private String text;
     private String time;
     private String title;
     private String type;
@@ -170,12 +206,12 @@ class NewsAttr {
     public void setUrl(String url) {
         this.url = url;
     }
-}
 
-//    Request request = new Request.Builder().url(url).build();
-//    OkHttpClient client = new OkHttpClient.Builder()
-//            .connectTimeout(timeOut, TimeUnit.MILLISECONDS)
-//            .writeTimeout(timeOut, TimeUnit.MILLISECONDS)
-//            .readTimeout(timeOut, TimeUnit.MILLISECONDS)
-//            .build();
-//        response = client.newCall(request).execute();
+    public String getText() {
+        return text;
+    }
+
+    public void setText(String text) {
+        this.text = text;
+    }
+}
