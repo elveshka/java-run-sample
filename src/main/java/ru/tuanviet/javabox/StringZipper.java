@@ -1,12 +1,10 @@
 package ru.tuanviet.javabox;
 
-import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.List;
 
 public class StringZipper<T> implements Iterable<String> {
+
     private final Iterator<?>[] iterators;
-    private final List<String> zippedStrings = new ArrayList<>();
 
     @SafeVarargs
     StringZipper(Iterable<T>... iterable) {
@@ -16,6 +14,7 @@ public class StringZipper<T> implements Iterable<String> {
         if (iterable.length == 0) {
             throw new IllegalArgumentException("No arguments passed");
         }
+
         iterators = new Iterator[iterable.length];
         for (int i = 0; i < iterators.length; ++i) {
             iterators[i] = iterable[i].iterator();
@@ -39,15 +38,18 @@ class StringZipperIterator implements Iterator<String> {
     @Override
     public boolean hasNext() {
         boolean result = true;
+
         for (Iterator<?> it : iterators) {
             result &= it.hasNext();
         }
+
         return result;
     }
 
     @Override
     public String next() {
         StringBuilder builder = new StringBuilder();
+
         for (Iterator<?> it : iterators) {
             builder.append(it.next()).append(" ");
         }
