@@ -1,10 +1,7 @@
 package ru.tuanviet.javabox;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.function.Consumer;
+import java.util.*;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
@@ -17,33 +14,46 @@ public class MegaStream<T> {
     }
 
     public MegaStream(Iterable<T> iterable) {
-
         this(consumer -> {
             iterable.forEach(consumer::accept);
         });
+        if (iterable == null) {
+            throw new IllegalArgumentException("null parameter");
+        }
+    }
+
+    public Optional<T> reduce(BiFunction<T, T, T> operator) {
+        final Object[] result = new Object[]{null};
+        final int[] generatedCount = {0};
+        generator.generate(value1 -> {
+            if (generatedCount[0] == 0) {
+                result[0] = value1;
+                ++generatedCount[0];
+            } else {
+                result[0] = operator.apply((T) result[0], value1);
+            }
+        });
+
+        return Optional.of((T) result[0]);
     }
 
     public MegaStream<T> filter(Predicate<T> predicate) {
-        return new MegaStream<T>(consumer -> generator.generate(value -> {
-            if (predicate.test(value)) {
-                consumer.accept(value);
-
-            }
-        }));
+        return new MegaStream<>(consumer -> generator.generate(
+                value -> {
+                    if (predicate.test(value)) {
+                        consumer.accept(value);
+                    }
+                }));
     }
 
     public <R> MegaStream<R> map(Function<T, R> function) {
 
-        return new MegaStream<R>(consumer -> generator.generate(
+        return new MegaStream<>(consumer -> generator.generate(
                 value -> {
                     consumer.accept(function.apply(value));
-                    System.out.println("mapping" + value);  // to remove. This is only for checking "not compute"
+                    // System.out.println("mapping" + value);  // to remove. This is only for checking "not compute"
                 }
         ));
-    }
-
-    public void forEach(Consumer<T> consumer) {
-        generator.generate(value -> consumer.accept(value));
     }
 
     public String join(String delimiter) {
@@ -75,9 +85,4 @@ public class MegaStream<T> {
         return resultSet;
     }
 
-}
-
-@FunctionalInterface
-interface Generator<T> {
-    void generate(Consumer<T> content);
 }
