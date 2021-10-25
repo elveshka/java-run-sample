@@ -2,6 +2,7 @@ package ru.tuanviet.javabox;
 
 import java.util.*;
 import java.util.function.BiFunction;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
@@ -22,6 +23,34 @@ public class MegaStream<T> {
         }
     }
 
+    public static <T> MegaStream<T> of(Iterable<T> iterable) {
+        return new MegaStream<T>(consumer -> iterable.forEach(item -> consumer.accept(item)));
+    }
+
+    public static <T> MegaStream<T> of(T... args) {
+        return MegaStream.of(Arrays.asList(args));
+    }
+
+    public MegaStream<T> filter(Predicate<T> predicate) {
+        return new MegaStream<T>(consumer -> generator.generate(
+                value -> {
+                    if (predicate.test(value)) {
+                        consumer.accept(value);
+
+                    }
+                }));
+    }
+
+    public <R> MegaStream<R> map(Function<T, R> function) {
+
+        return new MegaStream<>(consumer -> generator.generate(
+                value -> {
+                    consumer.accept(function.apply(value));
+                    // System.out.println("mapping" + value);  // to remove. This is only for checking "not compute"
+                }
+        ));
+    }
+
     public Optional<T> reduce(BiFunction<T, T, T> operator) {
         final Object[] result = new Object[]{null};
         final int[] generatedCount = {0};
@@ -37,32 +66,18 @@ public class MegaStream<T> {
         return Optional.of((T) result[0]);
     }
 
-    public MegaStream<T> filter(Predicate<T> predicate) {
-        return new MegaStream<>(consumer -> generator.generate(
-                value -> {
-                    if (predicate.test(value)) {
-                        consumer.accept(value);
-                    }
-                }));
+    public void forEach(Consumer<T> consumer) {
+        generator.generate(value -> consumer.accept(value));
     }
 
-    public <R> MegaStream<R> map(Function<T, R> function) {
-
-        return new MegaStream<>(consumer -> generator.generate(
-                value -> {
-                    consumer.accept(function.apply(value));
-                    // System.out.println("mapping" + value);  // to remove. This is only for checking "not compute"
-                }
-        ));
-    }
 
     public String join(String delimiter) {
         StringBuilder result = new StringBuilder();
+
         generator.generate(value -> {
             result.append(value.toString()).append(delimiter);
         });
-
-        return result.substring(0, result.length() - delimiter.length());
+        return result.substring(0, Math.max(0, result.length() - delimiter.length()));
     }
 
     public String join() {
