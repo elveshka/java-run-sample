@@ -23,7 +23,6 @@ public class MegaStream<T> {
             throw new IllegalArgumentException("null parameter");
         }
 
-
         this.generator = new Generator<T>() {
             @Override
             public void generate(Consumer<T> consumer) {
@@ -61,7 +60,6 @@ public class MegaStream<T> {
                     }
                 }));
         filteredStream.initialStream = this.initialStream;
-        System.out.println(initialStream.isParallel);
         return filteredStream;
     }
 
@@ -72,7 +70,6 @@ public class MegaStream<T> {
                 }
         ));
         mappedStream.initialStream = this.initialStream;
-        System.out.println(initialStream.isParallel);
         return mappedStream;
     }
 
@@ -128,12 +125,6 @@ public class MegaStream<T> {
                 resultSet.add(t);
             }
         });
-
-
-
-        /*generator.generate(value -> {
-            resultSet.add(value);
-        });*/
 
         return resultSet;
     }
