@@ -18,7 +18,6 @@ public class MegaStream<T> {
         this(consumer -> {
             iterable.forEach(consumer::accept);
         });
-
         if (iterable == null) {
             throw new IllegalArgumentException("null parameter");
         }
@@ -43,6 +42,7 @@ public class MegaStream<T> {
     }
 
     public <R> MegaStream<R> map(Function<T, R> function) {
+
         return new MegaStream<>(consumer -> generator.generate(
                 value -> {
                     consumer.accept(function.apply(value));
@@ -69,6 +69,7 @@ public class MegaStream<T> {
     public void forEach(Consumer<T> consumer) {
         generator.generate(value -> consumer.accept(value));
     }
+
 
     public String join(String delimiter) {
         StringBuilder result = new StringBuilder();

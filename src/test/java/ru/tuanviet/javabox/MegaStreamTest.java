@@ -2,14 +2,13 @@ package ru.tuanviet.javabox;
 
 import org.junit.Test;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class MegaStreamTest {
-    ArrayList<Integer> sutList = new ArrayList<>(Arrays.asList(1, 2, 3));
+    ArrayList<Integer> sutList = new ArrayList<>(Arrays.asList(1, 2, 7));
     MegaStream<Integer> sutStream = new MegaStream<>(sutList);
 
     @Test(expected = IllegalArgumentException.class)
@@ -86,5 +85,12 @@ public class MegaStreamTest {
         assertThat(result).isEqualTo(Arrays.asList(6, 9, 12));
 
     }
-    
+
+    @Test
+    public void reduce_test() {
+        Optional<Integer> test = sutStream.reduce((result, x) -> x + 2);
+        System.out.println(test);
+
+        System.out.println(sutList.stream().reduce((result, x) -> x + 2));
+    }
 }
