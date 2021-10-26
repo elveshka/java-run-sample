@@ -37,13 +37,14 @@ class StringZipperIterator implements Iterator<String> {
 
     @Override
     public boolean hasNext() {
-        boolean result = true;
 
         for (Iterator<?> it : iterators) {
-            result &= it.hasNext();
+            if (!it.hasNext()) {
+                return false;
+            }
         }
 
-        return result;
+        return true;
     }
 
     @Override

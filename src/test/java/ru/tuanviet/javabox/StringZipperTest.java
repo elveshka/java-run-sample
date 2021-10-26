@@ -10,12 +10,12 @@ public class StringZipperTest {
 
 
     @Test(expected = IllegalArgumentException.class)
-    public void shouldThrowExcepitionOnEmptyConstructor() {
+    public void shouldThrowExceptionOnEmptyConstructor() {
         new StringZipper<>();
     }
 
     @Test(expected = IllegalArgumentException.class)
-    public void shouldThrowExcepitionOnNull() {
+    public void shouldThrowExceptionOnNull() {
         new StringZipper<>(null);
     }
 
