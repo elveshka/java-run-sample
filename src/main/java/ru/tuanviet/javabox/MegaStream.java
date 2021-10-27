@@ -10,7 +10,7 @@ import java.util.function.Predicate;
 public class MegaStream<T> {
 
     private final Generator<T> generator;
-    public boolean isParallel = false;
+    private boolean isParallel = false;
     private MegaStream<?> initialStream;
 
     private MegaStream(Generator<T> generator) {
@@ -91,7 +91,6 @@ public class MegaStream<T> {
     public void forEach(Consumer<T> consumer) {
         generator.generate(value -> consumer.accept(value));
     }
-
 
     public String join(String delimiter) {
         StringBuilder result = new StringBuilder();
