@@ -2,7 +2,10 @@ package ru.tuanviet.javabox;
 
 import org.jetbrains.annotations.NotNull;
 
-import java.util.*;
+import java.util.AbstractMap;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
 import java.util.function.Supplier;
 
 public class SuperCache<K, V> extends AbstractMap<K, V> {
@@ -47,30 +50,16 @@ public class SuperCache<K, V> extends AbstractMap<K, V> {
         return locker;
     }
 
-    private class Watcher implements Runnable {
-        @Override
-        public void run() {
-            while (true) {
-                for (SuperEntry<K, V> elem : superCache) {
-                    System.out.println(elem.getKey());
-                }
-                try {
-                    Thread.sleep(ACCURACY_TTL);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-            }
-        }
-    }
-
     public static class SuperEntry<K, V> implements Entry<K, V> {
 
         private final K key;
         private V value;
+        private long lastUsed;
 
         public SuperEntry(K key, V value) {
             this.key = key;
             this.value = value;
+            this.lastUsed = System.currentTimeMillis();
         }
 
         public SuperEntry(Entry<? extends K, ? extends V> entry) {
@@ -92,6 +81,9 @@ public class SuperCache<K, V> extends AbstractMap<K, V> {
             return oldValue;
         }
 
+        public long getLastUsed() {
+            return lastUsed;
+        }
 //        public boolean equals(Object o) {
 //            if (!(o instanceof Map.Entry))
 //                return false;
@@ -108,5 +100,21 @@ public class SuperCache<K, V> extends AbstractMap<K, V> {
             return key + "=" + value;
         }
 
+    }
+
+    private class Watcher implements Runnable {
+        @Override
+        public void run() {
+            while (true) {
+                for (SuperEntry<K, V> elem : superCache) {
+                    System.out.println(elem.getKey());
+                }
+                try {
+                    Thread.sleep(ACCURACY_TTL);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
     }
 }
