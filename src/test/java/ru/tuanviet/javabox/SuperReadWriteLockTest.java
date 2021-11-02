@@ -40,11 +40,14 @@ public class SuperReadWriteLockTest {
     @Test(timeout = 500)
     public void shouldIncrementWhenWrite() {
         //given
+        Thread reader = new Thread(sutReader);
         Thread writer = new Thread(sutWriter);
 
         //when
+        reader.start();
         writer.start();
         try {
+            reader.join();
             writer.join();
         } catch (InterruptedException e) {
             e.printStackTrace();
@@ -63,6 +66,7 @@ public class SuperReadWriteLockTest {
 
         //when
         reader.start();
+        sleep(50);
         readWrite.start();
         writer.start();
         try {

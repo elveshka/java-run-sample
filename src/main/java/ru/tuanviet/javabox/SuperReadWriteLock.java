@@ -6,8 +6,8 @@ import java.util.Set;
 public class SuperReadWriteLock {
     private boolean isRead;
     private boolean isWrite;
-    private int numberOfThreads = 0;
-    private Set<Long> id = new HashSet<>();
+    private int numberOfReaders = 0;
+    private final Set<Long> id = new HashSet<>();
 
     public synchronized void acquireReadLock() {
         id.add(Thread.currentThread().getId());
@@ -18,33 +18,33 @@ public class SuperReadWriteLock {
             try {
                 wait(500);
             } catch (InterruptedException e) {
-                e.printStackTrace();
+                throw new RuntimeException("error on read lock", e);
             }
         }
         isRead = true;
-        numberOfThreads++;
+        numberOfReaders++;
     }
 
     public synchronized void releaseReadLock() {
         id.remove(Thread.currentThread().getId());
-        numberOfThreads--;
-        if (numberOfThreads <= 0) {
+        numberOfReaders--;
+        if (numberOfReaders <= 0) {
             isRead = false;
-            numberOfThreads = 0;
+            numberOfReaders = 0;
             notify();
         }
     }
 
     public synchronized void acquireWriteLock() {
         long tmpId = Thread.currentThread().getId();
-        while (isWrite || isRead) {
+        while(isWrite || isRead) {
             if (id.size() == 1 && id.contains(tmpId)) {
                 break;
             }
             try {
                 wait(500);
             } catch (InterruptedException e) {
-                e.printStackTrace();
+                throw new RuntimeException("error on write lock", e);
             }
         }
         isWrite = true;
