@@ -1,41 +1,80 @@
 package ru.tuanviet.javabox;
+
 import org.junit.Before;
 import org.junit.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static ru.tuanviet.javabox.SuperReadWriteLockTest.sleep;
 
 public class SuperReadWriteLockTest {
     private SuperReadWriteLock sutLocker;
     private TestReader sutReader;
     private TestWriter sutWriter;
-    private TestReadWrite sutTestReadWrite;
+    private TestReadWrite sutReadWrite;
 
     @Before
     public void setUp() {
         sutLocker = new SuperReadWriteLock();
         sutReader = new TestReader(sutLocker);
         sutWriter = new TestWriter(sutLocker);
-        sutTestReadWrite = new TestReadWrite(sutLocker);
+        sutReadWrite = new TestReadWrite(sutLocker);
     }
 
-    @Test
-    public void shouldReentrantWithSeveralThreads() {
-        Thread t1 = new Thread(sutReader);
-        Thread t2 = new Thread(sutWriter);
-        Thread t3 = new Thread(sutTestReadWrite);
+    @Test(timeout = 500)
+    public void shouldBeTrueAfterRead() {
+        //given
+        Thread reader = new Thread(sutReader);
 
-        t1.start();
-        t2.start();
-        t3.start();
-
+        //when
+        reader.start();
         try {
-            t1.join();
-            t2.join();
-            t3.join();
+            reader.join();
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
 
+        //then
+        assertThat(sutReader.check).isTrue();
+    }
+
+    @Test(timeout = 500)
+    public void shouldIncrementWhenWrite() {
+        //given
+        Thread writer = new Thread(sutWriter);
+
+        //when
+        writer.start();
+        try {
+            writer.join();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        //then
+        assertThat(sutWriter.getNumber()).isEqualTo(1);
+    }
+
+    @Test(timeout = 1000)
+    public void shouldReentrantWithSeveralThreads() {
+        //given
+        Thread reader = new Thread(sutReader);
+        Thread readWrite = new Thread(sutReadWrite);
+        Thread writer = new Thread(sutWriter);
+
+        //when
+        reader.start();
+        readWrite.start();
+        writer.start();
+        try {
+            reader.join();
+            readWrite.join();
+            writer.join();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        //then
+        assertThat(sutReadWrite.getNumber()).isEqualTo(2);
     }
 
     public static void sleep(int i) {
@@ -45,52 +84,72 @@ public class SuperReadWriteLockTest {
             e.printStackTrace();
         }
     }
-
 }
 
 class TestReader implements Runnable {
     private final SuperReadWriteLock locker;
+    public boolean check;
 
     public TestReader(SuperReadWriteLock locker) {
         this.locker = locker;
+        check = false;
     }
 
     @Override
     public void run() {
         locker.acquireReadLock();
-        SuperReadWriteLockTest.sleep(500);
+        sleep(100);
         locker.releaseReadLock();
+        check = true;
     }
 }
 
 class TestWriter implements Runnable {
     private final SuperReadWriteLock locker;
+    private int number;
 
     public TestWriter(SuperReadWriteLock locker) {
         this.locker = locker;
+        number = 0;
     }
+
+    public void inc() {number++; }
+
+    public int getNumber() { return number; }
 
     @Override
     public void run() {
         locker.acquireWriteLock();
-        SuperReadWriteLockTest.sleep(500);
+        inc();
         locker.releaseWriteLock();
     }
 }
 
 class TestReadWrite implements Runnable {
     private final SuperReadWriteLock locker;
+    private int number;
 
     public TestReadWrite(SuperReadWriteLock locker) {
         this.locker = locker;
+        number = 0;
     }
+
+    public void inc() {number++; }
+
+    public int getNumber() { return number; }
 
     @Override
     public void run() {
         locker.acquireReadLock();
         locker.acquireWriteLock();
-        SuperReadWriteLockTest.sleep(500);
+        inc();
         locker.releaseWriteLock();
         locker.releaseReadLock();
+
+        locker.acquireWriteLock();
+        locker.acquireReadLock();
+        locker.releaseReadLock();
+        inc();
+        locker.releaseWriteLock();
     }
 }

@@ -12,8 +12,11 @@ public class SuperReadWriteLock {
     public synchronized void acquireReadLock() {
         id.add(Thread.currentThread().getId());
         while (isWrite) {
+            if (id.size() == 1) {
+                break;
+            }
             try {
-                wait();
+                wait(500);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -39,7 +42,7 @@ public class SuperReadWriteLock {
                 break;
             }
             try {
-                wait(1000);
+                wait(500);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
