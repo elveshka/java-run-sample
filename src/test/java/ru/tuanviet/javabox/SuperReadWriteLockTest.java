@@ -7,14 +7,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static ru.tuanviet.javabox.SuperReadWriteLockTest.sleep;
 
 public class SuperReadWriteLockTest {
-    private SuperReadWriteLock sutLocker;
     private TestReader sutReader;
     private TestWriter sutWriter;
     private TestReadWrite sutReadWrite;
 
     @Before
     public void setUp() {
-        sutLocker = new SuperReadWriteLock();
+        SuperReadWriteLock sutLocker = new SuperReadWriteLock();
         sutReader = new TestReader(sutLocker);
         sutWriter = new TestWriter(sutLocker);
         sutReadWrite = new TestReadWrite(sutLocker);
@@ -81,9 +80,9 @@ public class SuperReadWriteLockTest {
         assertThat(sutReadWrite.getNumber()).isEqualTo(2);
     }
 
-    public static void sleep(int i) {
+    public static void sleep(int time) {
         try {
-            Thread.sleep(i);
+            Thread.sleep(time);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
