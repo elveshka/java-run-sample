@@ -2,10 +2,7 @@ package ru.tuanviet.javabox;
 
 import org.jetbrains.annotations.NotNull;
 
-import java.util.AbstractMap;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Supplier;
 
 public class SuperCache<K, V> extends AbstractMap<K, V> {
@@ -28,8 +25,92 @@ public class SuperCache<K, V> extends AbstractMap<K, V> {
         watcher.start();
     }
 
-    public synchronized V getOrCompute(K key, Supplier<V> valueSupplier) {
+    @Override
+    public int size() {
+        return superCache.size();
+    }
+
+    @Override
+    public boolean isEmpty() {
+        return superCache.isEmpty();
+    }
+
+    @Override
+    public boolean containsKey(Object key) {
+        for (SuperEntry<K, V> pair : superCache) {
+            if (pair.key.equals(key)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @Override
+    public boolean containsValue(Object value) {
+        for (SuperEntry<K, V> pair : superCache) {
+            if (pair.value.equals(value)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @Override
+    public V get(Object key) {
+        for (SuperEntry<K, V> pair : superCache) {
+            if (pair.key.equals(key)) {
+                return pair.getValue();
+            }
+        }
         return null;
+    }
+
+    @Override
+    public V put(K key, V value) {
+        for (SuperEntry<K, V> pair : superCache) {
+            if (pair.key.equals(key)) {
+                V oldValue = pair.getValue();
+                pair.setValue(value);
+                return oldValue;
+            }
+        }
+        superCache.add(new SuperEntry<K, V>(key, value));
+        return null;
+    }
+
+    @Override
+    public V remove(Object key) {
+        for (SuperEntry<K, V> pair : superCache) {
+            if (pair.key.equals(key)) {
+                V oldValue = pair.getValue();
+                superCache.remove(pair);
+                return oldValue;
+            }
+        }
+        return null;
+    }
+
+    @Override
+    public void clear() {
+        superCache.clear();
+    }
+
+    @Override
+    public Set<K> keySet() {
+        Set<K> tmpSet = new HashSet<>();
+        for (SuperEntry<K, V> pair : superCache) {
+            tmpSet.add(pair.key);
+        }
+        return tmpSet;
+    }
+
+    @Override
+    public Collection<V> values() {
+        Collection<V> tmpColl = new ArrayList<>();
+        for (SuperEntry<K, V> pair : superCache) {
+            tmpColl.add(pair.value);
+        }
+        return tmpColl;
     }
 
     @NotNull
@@ -37,6 +118,18 @@ public class SuperCache<K, V> extends AbstractMap<K, V> {
     public Set<Entry<K, V>> entrySet() {
         return null;
     }
+
+    public synchronized V getOrCompute(K key, Supplier<V> valueSupplier) {
+//        this.containsKey(key);
+        for (SuperEntry<K, V> pair : superCache) {
+            if (pair.key.equals(key)) {
+                return pair.getValue();
+            }
+        }
+        return null;
+    }
+
+
 
     public int getMaxSize() {
         return maxSize;
@@ -84,12 +177,13 @@ public class SuperCache<K, V> extends AbstractMap<K, V> {
         public long getLastUsed() {
             return lastUsed;
         }
-//        public boolean equals(Object o) {
-//            if (!(o instanceof Map.Entry))
-//                return false;
-//            Map.Entry<?, ?> e = (Map.Entry<?, ?>) o;
-//            return eq(key, e.getKey()) && eq(value, e.getValue());
-//        }
+
+        public boolean equals(Object o) {
+            if (!(o instanceof Map.Entry))
+                return false;
+            Map.Entry<?, ?> e = (Map.Entry<?, ?>) o;
+            return eq(key, e.getKey()) && eq(value, e.getValue());
+        }
 
         public int hashCode() {
             return (key == null ? 0 : key.hashCode()) ^
@@ -100,19 +194,24 @@ public class SuperCache<K, V> extends AbstractMap<K, V> {
             return key + "=" + value;
         }
 
+        private static boolean eq(Object o1, Object o2) {
+            return o1 == null ? o2 == null : o1.equals(o2);
+        }
+
     }
 
     private class Watcher implements Runnable {
+
         @Override
         public void run() {
             while (true) {
                 for (SuperEntry<K, V> elem : superCache) {
-                    System.out.println(elem.getKey());
+                    //System.out.println(elem.getKey());
                 }
                 try {
                     Thread.sleep(ACCURACY_TTL);
                 } catch (InterruptedException e) {
-                    e.printStackTrace();
+                    throw new RuntimeException("Crash watcher", e);
                 }
             }
         }
