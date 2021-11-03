@@ -3,9 +3,10 @@ package ru.tuanviet.javabox;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
+import java.util.function.BiConsumer;
 import java.util.function.Supplier;
 
-public class SuperCache<K, V> extends AbstractMap<K, V> {
+public class SuperCache<K, V> implements Map<K, V> {
     private final static long ACCURACY_TTL = 100;
     private final static int DEFAULT_MAXSIZE = 10;
     private final SuperReadWriteLock locker;
@@ -38,7 +39,7 @@ public class SuperCache<K, V> extends AbstractMap<K, V> {
     @Override
     public boolean containsKey(Object key) {
         for (SuperEntry<K, V> pair : superCache) {
-            if (pair.key.equals(key)) {
+            if (pair.getKey().equals(key)) {
                 return true;
             }
         }
@@ -48,7 +49,7 @@ public class SuperCache<K, V> extends AbstractMap<K, V> {
     @Override
     public boolean containsValue(Object value) {
         for (SuperEntry<K, V> pair : superCache) {
-            if (pair.value.equals(value)) {
+            if (pair.getValue().equals(value)) {
                 return true;
             }
         }
@@ -58,7 +59,7 @@ public class SuperCache<K, V> extends AbstractMap<K, V> {
     @Override
     public V get(Object key) {
         for (SuperEntry<K, V> pair : superCache) {
-            if (pair.key.equals(key)) {
+            if (pair.getKey().equals(key)) {
                 return pair.getValue();
             }
         }
@@ -68,7 +69,7 @@ public class SuperCache<K, V> extends AbstractMap<K, V> {
     @Override
     public V put(K key, V value) {
         for (SuperEntry<K, V> pair : superCache) {
-            if (pair.key.equals(key)) {
+            if (pair.getKey().equals(key)) {
                 V oldValue = pair.getValue();
                 pair.setValue(value);
                 return oldValue;
@@ -79,9 +80,16 @@ public class SuperCache<K, V> extends AbstractMap<K, V> {
     }
 
     @Override
+    public void putAll(Map<? extends K,? extends V> map) {
+        for (Entry<? extends K, ? extends V> pair : map.entrySet()) {
+            this.put(pair.getKey(), pair.getValue());
+        }
+    }
+
+    @Override
     public V remove(Object key) {
         for (SuperEntry<K, V> pair : superCache) {
-            if (pair.key.equals(key)) {
+            if (pair.getKey().equals(key)) {
                 V oldValue = pair.getValue();
                 superCache.remove(pair);
                 return oldValue;
@@ -95,20 +103,22 @@ public class SuperCache<K, V> extends AbstractMap<K, V> {
         superCache.clear();
     }
 
+    @NotNull
     @Override
     public Set<K> keySet() {
         Set<K> tmpSet = new HashSet<>();
         for (SuperEntry<K, V> pair : superCache) {
-            tmpSet.add(pair.key);
+            tmpSet.add(pair.getKey());
         }
         return tmpSet;
     }
 
+    @NotNull
     @Override
     public Collection<V> values() {
         Collection<V> tmpColl = new ArrayList<>();
         for (SuperEntry<K, V> pair : superCache) {
-            tmpColl.add(pair.value);
+            tmpColl.add(pair.getValue());
         }
         return tmpColl;
     }
@@ -116,20 +126,60 @@ public class SuperCache<K, V> extends AbstractMap<K, V> {
     @NotNull
     @Override
     public Set<Entry<K, V>> entrySet() {
-        return null;
+        Set<Entry<K, V>> tmpSet = new HashSet<>();
+        for (SuperEntry<K, V> pair : superCache) {
+            tmpSet.add(pair);
+        }
+        return tmpSet;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof SuperCache)) {
+            return false;
+        }
+        SuperCache<K, V> input = (SuperCache<K, V>) o;
+        for (SuperEntry<K, V> pair : input.superCache) {
+            if (!this.superCache.contains(pair)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(locker, maxSize, ttl, superCache);
+    }
+
+    @Override
+    public void forEach(BiConsumer<? super K, ? super V> action) {
+        Objects.requireNonNull(action);
+        for (SuperEntry<K, V> pair : superCache) {
+            K k;
+            V v;
+            try {
+                k = pair.getKey();
+                v = pair.getValue();
+            } catch (IllegalStateException ise) {
+                throw new ConcurrentModificationException(ise);
+            }
+            action.accept(k, v);
+        }
     }
 
     public synchronized V getOrCompute(K key, Supplier<V> valueSupplier) {
 //        this.containsKey(key);
         for (SuperEntry<K, V> pair : superCache) {
-            if (pair.key.equals(key)) {
+            if (pair.getKey().equals(key)) {
                 return pair.getValue();
             }
         }
         return null;
     }
-
-
 
     public int getMaxSize() {
         return maxSize;
