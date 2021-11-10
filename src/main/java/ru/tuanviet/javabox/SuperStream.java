@@ -5,7 +5,7 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 
 
-public class  SuperStream <T>  {
+public class SuperStream <T>  {
 
     private final Iterable<T> content;
 

@@ -28,41 +28,57 @@ public class SuperCache<K, V> implements Map<K, V> {
 
     @Override
     public int size() {
-        return superCache.size();
+        locker.acquireReadLock();
+        int tmp = superCache.size();
+        locker.releaseReadLock();
+        return tmp;
     }
 
     @Override
     public boolean isEmpty() {
-        return superCache.isEmpty();
+        locker.acquireReadLock();
+        boolean tmp = superCache.isEmpty();
+        locker.releaseReadLock();
+        return tmp;
     }
 
     @Override
     public boolean containsKey(Object key) {
+        locker.acquireReadLock();
         for (SuperEntry<K, V> pair : superCache) {
             if (pair.getKey().equals(key)) {
+                locker.releaseReadLock();
                 return true;
             }
         }
+        locker.releaseReadLock();
         return false;
     }
 
     @Override
     public boolean containsValue(Object value) {
+        locker.acquireReadLock();
         for (SuperEntry<K, V> pair : superCache) {
             if (pair.getValue().equals(value)) {
+                locker.releaseReadLock();
                 return true;
             }
         }
+        locker.releaseReadLock();
         return false;
     }
 
     @Override
     public V get(Object key) {
+        locker.acquireReadLock();
         for (SuperEntry<K, V> pair : superCache) {
             if (pair.getKey().equals(key)) {
-                return pair.getValue();
+                V tmp = pair.getValue();
+                locker.releaseReadLock();
+                return tmp;
             }
         }
+        locker.releaseReadLock();
         return null;
     }
 
@@ -73,6 +89,7 @@ public class SuperCache<K, V> implements Map<K, V> {
             if (pair.getKey().equals(key)) {
                 V oldValue = pair.getValue();
                 pair.setValue(value);
+                locker.releaseWriteLock();
                 return oldValue;
             }
         }
@@ -81,6 +98,7 @@ public class SuperCache<K, V> implements Map<K, V> {
         return null;
     }
 
+    // ---- loker / addall // todo
     @Override
     public void putAll(Map<? extends K,? extends V> map) {
         for (Entry<? extends K, ? extends V> pair : map.entrySet()) {
@@ -90,48 +108,59 @@ public class SuperCache<K, V> implements Map<K, V> {
 
     @Override
     public V remove(Object key) {
+        locker.acquireWriteLock();
         for (SuperEntry<K, V> pair : superCache) {
             if (pair.getKey().equals(key)) {
                 V oldValue = pair.getValue();
                 superCache.remove(pair);
+                locker.releaseWriteLock();
                 return oldValue;
             }
         }
+        locker.releaseWriteLock();
         return null;
     }
 
     @Override
     public void clear() {
+        locker.acquireWriteLock();
         superCache.clear();
+        locker.releaseWriteLock();
     }
 
     @NotNull
     @Override
     public Set<K> keySet() {
+        locker.acquireReadLock();
         Set<K> tmpSet = new HashSet<>();
         for (SuperEntry<K, V> pair : superCache) {
             tmpSet.add(pair.getKey());
         }
+        locker.releaseReadLock();
         return tmpSet;
     }
 
     @NotNull
     @Override
     public Collection<V> values() {
+        locker.acquireReadLock();
         Collection<V> tmpColl = new ArrayList<>();
         for (SuperEntry<K, V> pair : superCache) {
             tmpColl.add(pair.getValue());
         }
+        locker.releaseReadLock();
         return tmpColl;
     }
 
     @NotNull
     @Override
     public Set<Entry<K, V>> entrySet() {
+        locker.acquireReadLock();
         Set<Entry<K, V>> tmpSet = new HashSet<>();
         for (SuperEntry<K, V> pair : superCache) {
             tmpSet.add(pair);
         }
+        locker.releaseReadLock();
         return tmpSet;
     }
 
@@ -144,11 +173,14 @@ public class SuperCache<K, V> implements Map<K, V> {
             return false;
         }
         SuperCache<K, V> input = (SuperCache<K, V>) o;
+        locker.acquireReadLock();
         for (SuperEntry<K, V> pair : input.superCache) {
             if (!this.superCache.contains(pair)) {
+                locker.releaseReadLock();
                 return false;
             }
         }
+        locker.releaseReadLock();
         return true;
     }
 
@@ -160,6 +192,7 @@ public class SuperCache<K, V> implements Map<K, V> {
     @Override
     public void forEach(BiConsumer<? super K, ? super V> action) {
         Objects.requireNonNull(action);
+        locker.acquireWriteLock();
         for (SuperEntry<K, V> pair : superCache) {
             K k;
             V v;
@@ -171,15 +204,18 @@ public class SuperCache<K, V> implements Map<K, V> {
             }
             action.accept(k, v);
         }
+        locker.releaseWriteLock();
     }
 
     public synchronized V getOrCompute(K key, Supplier<V> valueSupplier) {
-//        this.containsKey(key);
-        for (SuperEntry<K, V> pair : superCache) {
-            if (pair.getKey().equals(key)) {
-                return pair.getValue();
-            }
+        locker.acquireReadLock();
+        if (this.containsKey(key)) {
+            V tmp = this.get(key);
+            locker.releaseReadLock();
+            return tmp;
         }
+        locker.releaseReadLock();
+        this.put(key, valueSupplier.get());
         return null;
     }
 

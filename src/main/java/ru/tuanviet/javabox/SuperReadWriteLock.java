@@ -10,9 +10,10 @@ public class SuperReadWriteLock {
     private final Set<Long> id = new HashSet<>();
 
     public synchronized void acquireReadLock() {
-        id.add(Thread.currentThread().getId());
+        long tmpId = Thread.currentThread().getId();
+        id.add(tmpId);
         while (isWrite) {
-            if (id.size() == 1) {
+            if (numberOfReaders == 1 && id.contains(tmpId)) {
                 break;
             }
             try {
