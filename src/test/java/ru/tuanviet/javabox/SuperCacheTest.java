@@ -24,17 +24,17 @@ public class SuperCacheTest {
     @Test
     public void shouldPutWork() {
         sutSuperCache = new SuperCache<>(1000);
-        sutSuperCache.put("01","Test01");
+        sutSuperCache.put("01", "Test01");
         assertThat(sutSuperCache.size()).isEqualTo(1);
     }
 
     @Test
     public void shouldDeleteCacheWhenTimeup() {
         sutSuperCache = new SuperCache<>(100);
-        sutSuperCache.put("01","Test01");
-        sutSuperCache.put("02","Test02");
-        sutSuperCache.put("03","Test03");
-        sleepForTest(500);
+        sutSuperCache.put("01", "Test01");
+        sutSuperCache.put("02", "Test02");
+        sutSuperCache.put("03", "Test03");
+        sleepForTest(200);
         assertThat(sutSuperCache.size()).isEqualTo(0);
     }
 
@@ -42,7 +42,7 @@ public class SuperCacheTest {
     public void shouldGetOrComputeWorkGet() {
         sutSuperCache = new SuperCache<>(1000);
         sutSuperCache.put("01", "Test01");
-        String test = sutSuperCache.getOrCompute("01",new StringReturn("Test02"));
+        String test = sutSuperCache.getOrCompute("01", new StringReturn("Test02"));
         assertThat(test).isEqualTo("Test01");
     }
 
@@ -50,7 +50,7 @@ public class SuperCacheTest {
     public void shouldGetOrComputeWorkCompute() {
         sutSuperCache = new SuperCache<>(1000);
         sutSuperCache.put("01", "Test01");
-        String test = sutSuperCache.getOrCompute("02",new StringReturn("Test02"));
+        String test = sutSuperCache.getOrCompute("02", new StringReturn("Test02"));
         assertThat(test).isNull();
         assertThat(sutSuperCache.containsValue("Test02")).isTrue();
     }
@@ -64,17 +64,17 @@ public class SuperCacheTest {
     }
 }
 
-    class StringReturn<T> implements Supplier<T> {
-        T t;
+class StringReturn<T> implements Supplier<T> {
+    T t;
 
-        public StringReturn(T t) {
-            this.t = t;
-        }
-
-
-        @Override
-        public T get() {
-            return t;
-        }
+    public StringReturn(T t) {
+        this.t = t;
     }
+
+
+    @Override
+    public T get() {
+        return t;
+    }
+}
 

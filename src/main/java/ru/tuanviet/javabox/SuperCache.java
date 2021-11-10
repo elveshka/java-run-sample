@@ -7,18 +7,17 @@ import java.util.function.BiConsumer;
 import java.util.function.Supplier;
 
 public class SuperCache<K, V> implements Map<K, V> {
-    private final static long ACCURACY_TTL = 100;
-    private final static int DEFAULT_MAXSIZE = 10;
+    private final static long TTL_GAP = 100;
     private final SuperReadWriteLock locker;
-    private final int maxSize;
+    private final Integer maxSize;
     private final long ttl;
     private final List<SuperEntry<K, V>> superCache = new ArrayList<>();
 
     public SuperCache(long ttl) {
-        this(ttl, DEFAULT_MAXSIZE);
+        this(ttl, null);
     }
 
-    public SuperCache(long ttl, int maxSize) {
+    public SuperCache(long ttl, Integer maxSize) {
         locker = new SuperReadWriteLock();
         this.maxSize = maxSize;
         this.ttl = ttl;
@@ -84,23 +83,25 @@ public class SuperCache<K, V> implements Map<K, V> {
 
     @Override
     public V put(K key, V value) {
-        locker.acquireWriteLock();
-        for (SuperEntry<K, V> pair : superCache) {
-            if (pair.getKey().equals(key)) {
-                V oldValue = pair.getValue();
-                pair.setValue(value);
-                locker.releaseWriteLock();
-                return oldValue;
+        if (maxSize == null) {
+            locker.acquireWriteLock();
+            for (SuperEntry<K, V> pair : superCache) {
+                if (pair.getKey().equals(key)) {
+                    V oldValue = pair.getValue();
+                    pair.setValue(value);
+                    locker.releaseWriteLock();
+                    return oldValue;
+                }
             }
+            superCache.add(new SuperEntry<>(key, value));
+            locker.releaseWriteLock();
         }
-        superCache.add(new SuperEntry<K, V>(key, value));
-        locker.releaseWriteLock();
         return null;
     }
 
-    // ---- loker / addall // todo
+    // ---- locker / addAll // todo
     @Override
-    public void putAll(Map<? extends K,? extends V> map) {
+    public void putAll(Map<? extends K, ? extends V> map) {
         for (Entry<? extends K, ? extends V> pair : map.entrySet()) {
             this.put(pair.getKey(), pair.getValue());
         }
@@ -156,10 +157,7 @@ public class SuperCache<K, V> implements Map<K, V> {
     @Override
     public Set<Entry<K, V>> entrySet() {
         locker.acquireReadLock();
-        Set<Entry<K, V>> tmpSet = new HashSet<>();
-        for (SuperEntry<K, V> pair : superCache) {
-            tmpSet.add(pair);
-        }
+        Set<Entry<K, V>> tmpSet = new HashSet<>(superCache);
         locker.releaseReadLock();
         return tmpSet;
     }
@@ -227,10 +225,6 @@ public class SuperCache<K, V> implements Map<K, V> {
         return ttl;
     }
 
-    public SuperReadWriteLock getLocker() {
-        return locker;
-    }
-
     public static class SuperEntry<K, V> implements Entry<K, V> {
 
         private final K key;
@@ -246,6 +240,10 @@ public class SuperCache<K, V> implements Map<K, V> {
         public SuperEntry(Entry<? extends K, ? extends V> entry) {
             this.key = entry.getKey();
             this.value = entry.getValue();
+        }
+
+        private static boolean eq(Object o1, Object o2) {
+            return Objects.equals(o1, o2);
         }
 
         private void updateLastUsed() {
@@ -290,10 +288,6 @@ public class SuperCache<K, V> implements Map<K, V> {
             return key + "=" + value;
         }
 
-        private static boolean eq(Object o1, Object o2) {
-            return o1 == null ? o2 == null : o1.equals(o2);
-        }
-
     }
 
     private class Watcher implements Runnable {
@@ -301,25 +295,21 @@ public class SuperCache<K, V> implements Map<K, V> {
         @Override
         public void run() {
             while (true) {
-                SuperEntry<K, V> elem;
-                int size = superCache.size();
-
-                for (int i = 0; i < size; ++i) {
-                    elem = superCache.get(i);
+                Iterator<SuperEntry<K, V>> elementsIterator = superCache.iterator();
+                while (elementsIterator.hasNext()) {
+                    SuperEntry<K, V> elem = elementsIterator.next();
                     long lastUsedTime = elem.getLastUsed();
                     long currentTime = System.currentTimeMillis();
                     long actualTime = currentTime - lastUsedTime;
-                    if (actualTime >  ttl) {
+                    if (actualTime > ttl) {
 //                        System.out.println(elem.getKey() + " must be delete");
                         locker.acquireWriteLock();
-                        superCache.remove(elem);
-                        i--;
-                        size--;
+                        elementsIterator.remove();
                         locker.releaseWriteLock();
                     }
                 }
                 try {
-                    Thread.sleep(ACCURACY_TTL);
+                    Thread.sleep(TTL_GAP);
                 } catch (InterruptedException e) {
                     throw new RuntimeException("Crash watcher", e);
                 }
