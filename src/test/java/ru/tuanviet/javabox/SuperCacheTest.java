@@ -2,6 +2,7 @@ package ru.tuanviet.javabox;
 
 import org.junit.Test;
 
+import static java.lang.Thread.sleep;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class SuperCacheTest {
@@ -19,12 +20,27 @@ public class SuperCacheTest {
     }
 
     @Test
-    public void shouldTest() {
-        sutSuperCache = new SuperCache<>(5000);
+    public void shouldNotCrashPut() {
+        sutSuperCache = new SuperCache<>(1000);
+        sutSuperCache.put("01","Test01");
+        assertThat(sutSuperCache.size()).isEqualTo(1);
+    }
+
+    @Test
+    public void shouldDeleteCache() {
+        sutSuperCache = new SuperCache<>(100);
         sutSuperCache.put("01","Test01");
         sutSuperCache.put("02","Test02");
         sutSuperCache.put("03","Test03");
-        assertThat(sutSuperCache.size()).isEqualTo(3);
+        sleepForTest(500);
+        assertThat(sutSuperCache.size()).isEqualTo(0);
     }
 
+    private void sleepForTest(int time) {
+        try {
+            sleep(time);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
 }

@@ -68,6 +68,7 @@ public class SuperCache<K, V> implements Map<K, V> {
 
     @Override
     public V put(K key, V value) {
+        locker.acquireWriteLock();
         for (SuperEntry<K, V> pair : superCache) {
             if (pair.getKey().equals(key)) {
                 V oldValue = pair.getValue();
@@ -76,6 +77,7 @@ public class SuperCache<K, V> implements Map<K, V> {
             }
         }
         superCache.add(new SuperEntry<K, V>(key, value));
+        locker.releaseWriteLock();
         return null;
     }
 
@@ -202,7 +204,7 @@ public class SuperCache<K, V> implements Map<K, V> {
         public SuperEntry(K key, V value) {
             this.key = key;
             this.value = value;
-            this.lastUsed = System.currentTimeMillis();
+            updateLastUsed();
         }
 
         public SuperEntry(Entry<? extends K, ? extends V> entry) {
@@ -210,17 +212,24 @@ public class SuperCache<K, V> implements Map<K, V> {
             this.value = entry.getValue();
         }
 
+        private void updateLastUsed() {
+            this.lastUsed = System.currentTimeMillis();
+        }
+
         public K getKey() {
+            updateLastUsed();
             return key;
         }
 
         public V getValue() {
+            updateLastUsed();
             return value;
         }
 
         public V setValue(V value) {
             V oldValue = this.value;
             this.value = value;
+            updateLastUsed();
             return oldValue;
         }
 
@@ -241,6 +250,7 @@ public class SuperCache<K, V> implements Map<K, V> {
         }
 
         public String toString() {
+            updateLastUsed();
             return key + "=" + value;
         }
 
@@ -255,8 +265,22 @@ public class SuperCache<K, V> implements Map<K, V> {
         @Override
         public void run() {
             while (true) {
-                for (SuperEntry<K, V> elem : superCache) {
-                    //System.out.println(elem.getKey());
+                SuperEntry<K, V> elem;
+                int size = superCache.size();
+
+                for (int i = 0; i < size; ++i) {
+                    elem = superCache.get(i);
+                    long lastUsedTime = elem.getLastUsed();
+                    long currentTime = System.currentTimeMillis();
+                    long actualTime = currentTime - lastUsedTime;
+                    if (actualTime >  ttl) {
+//                        System.out.println(elem.getKey() + " must be delete");
+                        locker.acquireWriteLock();
+                        superCache.remove(elem);
+                        i--;
+                        size--;
+                        locker.releaseWriteLock();
+                    }
                 }
                 try {
                     Thread.sleep(ACCURACY_TTL);

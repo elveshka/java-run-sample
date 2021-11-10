@@ -8,6 +8,7 @@
         <outputRelativeToContentRoot value="true" />
         <module name="java-run-sample" />
         <module name="javabox" />
+        <module name="last_task" />
         <module name="SuperReadWriteLock" />
       </profile>
     </annotationProcessing>
