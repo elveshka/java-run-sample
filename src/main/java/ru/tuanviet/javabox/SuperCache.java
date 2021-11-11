@@ -25,6 +25,10 @@ public class SuperCache<K, V> implements Map<K, V> {
         watcher.start();
     }
 
+    public List<SuperEntry<K, V>> getSuperCache() {
+        return superCache;
+    }
+
     @Override
     public int size() {
         locker.acquireReadLock();
@@ -191,7 +195,8 @@ public class SuperCache<K, V> implements Map<K, V> {
     public void forEach(BiConsumer<? super K, ? super V> action) {
         Objects.requireNonNull(action);
         locker.acquireWriteLock();
-        for (SuperEntry<K, V> pair : superCache) {
+        for (int i = 0, superCacheSize = superCache.size(); i < superCacheSize; i++) {
+            SuperEntry<K, V> pair = superCache.get(i);
             K k;
             V v;
             try {
@@ -284,7 +289,7 @@ public class SuperCache<K, V> implements Map<K, V> {
         }
 
         public String toString() {
-            updateLastUsed();
+            //updateLastUsed();
             return key + "=" + value;
         }
 
@@ -295,19 +300,24 @@ public class SuperCache<K, V> implements Map<K, V> {
         @Override
         public void run() {
             while (true) {
-                Iterator<SuperEntry<K, V>> elementsIterator = superCache.iterator();
+                Iterator<SuperEntry<K, V>> elementsIterator
+                        = superCache.iterator();
+
+                locker.acquireReadLock();
                 while (elementsIterator.hasNext()) {
                     SuperEntry<K, V> elem = elementsIterator.next();
+
                     long lastUsedTime = elem.getLastUsed();
                     long currentTime = System.currentTimeMillis();
                     long actualTime = currentTime - lastUsedTime;
+
                     if (actualTime > ttl) {
-//                        System.out.println(elem.getKey() + " must be delete");
                         locker.acquireWriteLock();
                         elementsIterator.remove();
                         locker.releaseWriteLock();
                     }
                 }
+                locker.releaseReadLock();
                 try {
                     Thread.sleep(TTL_GAP);
                 } catch (InterruptedException e) {

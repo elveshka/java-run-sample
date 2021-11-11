@@ -54,6 +54,29 @@ public class SuperCacheTest {
         assertThat(sutSuperCache.containsValue("Test02")).isTrue();
     }
 
+    @Test
+    public void shouldUpdateLastUsedParameter() {
+        sutSuperCache = new SuperCache<>(100);
+        sutSuperCache.put("keep", "alive");
+
+        for (int i = 0; i < 100; ++i) {
+            sutSuperCache.get("keep");
+            sleepFromThread(50);
+        }
+
+        assertThat(sutSuperCache.size()).isEqualTo(1);
+    }
+
+    @Test
+    public void testTest() {
+        sutSuperCache = new SuperCache<>(199);
+        for (int i = 0; i < 100; ++i) {
+            sutSuperCache.put("" + (i + 1), "");
+            sleepFromThread(50);
+        }
+        sutSuperCache.getSuperCache().forEach(x -> System.out.println(x.getLastUsed()));
+    }
+
     private void sleepFromThread(int time) {
         try {
             Thread.sleep(time);
