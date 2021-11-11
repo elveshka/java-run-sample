@@ -85,13 +85,14 @@ public class SuperCache<K, V> implements Map<K, V> {
         return null;
     }
 
+    // todo
     @Override
     public V put(K key, V value) {
         if (maxSize == null) {
             locker.acquireWriteLock();
             for (SuperEntry<K, V> pair : superCache) {
-                if (pair.getKey().equals(key)) {
-                    V oldValue = pair.getValue();
+                if (pair.key.equals(key)) {     // change from getKey
+                    V oldValue = pair.value;    // change from getValue
                     pair.setValue(value);
                     locker.releaseWriteLock();
                     return oldValue;
@@ -195,15 +196,14 @@ public class SuperCache<K, V> implements Map<K, V> {
     public void forEach(BiConsumer<? super K, ? super V> action) {
         Objects.requireNonNull(action);
         locker.acquireWriteLock();
-        for (int i = 0, superCacheSize = superCache.size(); i < superCacheSize; i++) {
-            SuperEntry<K, V> pair = superCache.get(i);
+        for (SuperEntry<K, V> pair : superCache) {
             K k;
             V v;
             try {
                 k = pair.getKey();
                 v = pair.getValue();
-            } catch (IllegalStateException ise) {
-                throw new ConcurrentModificationException(ise);
+            } catch (IllegalStateException e) {
+                throw new ConcurrentModificationException("Crash forEach", e);
             }
             action.accept(k, v);
         }
@@ -289,7 +289,7 @@ public class SuperCache<K, V> implements Map<K, V> {
         }
 
         public String toString() {
-            //updateLastUsed();
+            updateLastUsed();
             return key + "=" + value;
         }
 
@@ -300,17 +300,15 @@ public class SuperCache<K, V> implements Map<K, V> {
         @Override
         public void run() {
             while (true) {
+                locker.acquireReadLock();   // up from 306
                 Iterator<SuperEntry<K, V>> elementsIterator
                         = superCache.iterator();
 
-                locker.acquireReadLock();
                 while (elementsIterator.hasNext()) {
                     SuperEntry<K, V> elem = elementsIterator.next();
-
                     long lastUsedTime = elem.getLastUsed();
                     long currentTime = System.currentTimeMillis();
                     long actualTime = currentTime - lastUsedTime;
-
                     if (actualTime > ttl) {
                         locker.acquireWriteLock();
                         elementsIterator.remove();

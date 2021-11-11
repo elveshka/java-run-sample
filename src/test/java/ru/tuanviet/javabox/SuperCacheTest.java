@@ -33,7 +33,7 @@ public class SuperCacheTest {
         sutSuperCache.put("01", "Test01");
         sutSuperCache.put("02", "Test02");
         sutSuperCache.put("03", "Test03");
-        sleepFromThread(200);
+        sleep(200);
         assertThat(sutSuperCache.size()).isEqualTo(0);
     }
 
@@ -61,7 +61,7 @@ public class SuperCacheTest {
 
         for (int i = 0; i < 100; ++i) {
             sutSuperCache.get("keep");
-            sleepFromThread(50);
+            sleep(2);
         }
 
         assertThat(sutSuperCache.size()).isEqualTo(1);
@@ -72,16 +72,16 @@ public class SuperCacheTest {
         sutSuperCache = new SuperCache<>(199);
         for (int i = 0; i < 100; ++i) {
             sutSuperCache.put("" + (i + 1), "");
-            sleepFromThread(50);
+            sleep(2);
         }
         sutSuperCache.getSuperCache().forEach(x -> System.out.println(x.getLastUsed()));
     }
 
-    private void sleepFromThread(int time) {
+    private void sleep(int time) {
         try {
             Thread.sleep(time);
         } catch (InterruptedException e) {
-            e.printStackTrace();
+            throw new RuntimeException("Crash SuperCacheTest.sleep", e);
         }
     }
 }

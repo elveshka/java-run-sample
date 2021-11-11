@@ -80,6 +80,11 @@ public class SuperReadWriteLockTest {
         assertThat(sutReadWrite.getNumber()).isEqualTo(2);
     }
 
+    @Test
+    public void shouldTest() {
+
+    }
+
     public static void sleep(int time) {
         try {
             Thread.sleep(time);
@@ -105,6 +110,8 @@ class TestReader implements Runnable {
         locker.releaseReadLock();
         check = true;
     }
+
+
 }
 
 class TestWriter implements Runnable {
