@@ -4,7 +4,6 @@ import org.junit.Test;
 
 import java.util.function.Supplier;
 
-import static java.lang.Thread.sleep;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class SuperCacheTest {
@@ -34,7 +33,7 @@ public class SuperCacheTest {
         sutSuperCache.put("01", "Test01");
         sutSuperCache.put("02", "Test02");
         sutSuperCache.put("03", "Test03");
-        sleepForTest(200);
+        sleepFromThread(200);
         assertThat(sutSuperCache.size()).isEqualTo(0);
     }
 
@@ -42,7 +41,7 @@ public class SuperCacheTest {
     public void shouldGetOrComputeWorkGet() {
         sutSuperCache = new SuperCache<>(1000);
         sutSuperCache.put("01", "Test01");
-        String test = sutSuperCache.getOrCompute("01", new StringReturn("Test02"));
+        String test = sutSuperCache.getOrCompute("01", new StringReturn<>("Test02"));
         assertThat(test).isEqualTo("Test01");
     }
 
@@ -50,14 +49,14 @@ public class SuperCacheTest {
     public void shouldGetOrComputeWorkCompute() {
         sutSuperCache = new SuperCache<>(1000);
         sutSuperCache.put("01", "Test01");
-        String test = sutSuperCache.getOrCompute("02", new StringReturn("Test02"));
+        String test = sutSuperCache.getOrCompute("02", new StringReturn<>("Test02"));
         assertThat(test).isNull();
         assertThat(sutSuperCache.containsValue("Test02")).isTrue();
     }
 
-    private void sleepForTest(int time) {
+    private void sleepFromThread(int time) {
         try {
-            sleep(time);
+            Thread.sleep(time);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
@@ -77,4 +76,3 @@ class StringReturn<T> implements Supplier<T> {
         return t;
     }
 }
-
