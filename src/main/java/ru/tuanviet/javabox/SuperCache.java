@@ -7,13 +7,12 @@ import java.util.function.BiConsumer;
 import java.util.function.Supplier;
 
 public class SuperCache<K, V> implements Map<K, V> {
-    private final static long TTL_GAP = 100;
+    private final static long WATCHER_DELAY = 100;
     private final SuperReadWriteLock locker;
     private final Integer maxSize;
     private final long ttl;
-    private final List<SuperEntry<K, V>> superCache = new ArrayList<>();
-    private final Queue<SuperEntry<K,V>> queue = new ArrayDeque<>();
-    private final Watcher runner;
+    private final Queue<SuperEntry<K, V>> superCache = new ArrayDeque<>();
+    private final Thread thread;
 
     public SuperCache(long ttl) {
         this(ttl, null);
@@ -23,12 +22,19 @@ public class SuperCache<K, V> implements Map<K, V> {
         locker = new SuperReadWriteLock();
         this.maxSize = maxSize;
         this.ttl = ttl;
-        runner = new Watcher();
-        Thread watcher = new Thread(runner);
-        watcher.start();
+        thread = new Thread(new Watcher());
+        thread.start();
     }
 
-    public List<SuperEntry<K, V>> getSuperCache() {
+    public Integer getMaxSize() {
+        return maxSize;
+    }
+
+    public long getTtl() {
+        return ttl;
+    }
+
+    public Queue<SuperEntry<K, V>> getSuperCache() {
         return superCache;
     }
 
@@ -79,37 +85,35 @@ public class SuperCache<K, V> implements Map<K, V> {
         locker.acquireReadLock();
         for (SuperEntry<K, V> pair : superCache) {
             if (pair.getKey().equals(key)) {
-                V tmp = pair.getValue();
+                V result = pair.getValue();
                 locker.releaseReadLock();
-                return tmp;
+                return result;
             }
         }
         locker.releaseReadLock();
         return null;
     }
 
-    // todo
     @Override
     public V put(K key, V value) {
-        if (maxSize == null) {
-            locker.acquireWriteLock();
-            for (SuperEntry<K, V> pair : superCache) {
-                if (pair.key.equals(key)) {     // change from getKey
-                    V oldValue = pair.value;    // change from getValue
-                    pair.setValue(value);
-                    locker.releaseWriteLock();
-                    return oldValue;
-                }
+        locker.acquireWriteLock();
+        for (SuperEntry<K, V> pair : superCache) {
+            if (pair.key.equals(key)) {     // change from getKey
+                V oldValue = pair.value;    // change from getValue
+                pair.setValue(value);
+                locker.releaseWriteLock();
+                return oldValue;
             }
-            SuperEntry<K, V> newElement = new SuperEntry<>(key, value);
-            superCache.add(newElement);
-            queue.add(newElement);
-            locker.releaseWriteLock();
         }
+        if (maxSize != null && maxSize == superCache.size()) {
+            superCache.remove();
+        }
+        superCache.add(new SuperEntry<>(key, value));
+        locker.releaseWriteLock();
         return null;
     }
 
-    // ---- locker / addAll // todo
+    // ---- locker / addAll // todo with maxSize
     @Override
     public void putAll(Map<? extends K, ? extends V> map) {
         for (Entry<? extends K, ? extends V> pair : map.entrySet()) {
@@ -122,10 +126,10 @@ public class SuperCache<K, V> implements Map<K, V> {
         locker.acquireWriteLock();
         for (SuperEntry<K, V> pair : superCache) {
             if (pair.key.equals(key)) {
-                V oldValue = pair.value;
+                V value = pair.value;
                 superCache.remove(pair);
                 locker.releaseWriteLock();
-                return oldValue;
+                return value;
             }
         }
         locker.releaseWriteLock();
@@ -143,38 +147,40 @@ public class SuperCache<K, V> implements Map<K, V> {
     @Override
     public Set<K> keySet() {
         locker.acquireReadLock();
-        Set<K> tmpSet = new HashSet<>();
+        Set<K> result = new HashSet<>();
+
         for (SuperEntry<K, V> pair : superCache) {
-            tmpSet.add(pair.getKey());
+            result.add(pair.getKey());
         }
         locker.releaseReadLock();
-        return tmpSet;
+
+        return result;
     }
 
     @Override
     protected void finalize() {
-        this.runner.breakLoop();
+        this.thread.interrupt();
     }
 
     @NotNull
     @Override
     public Collection<V> values() {
         locker.acquireReadLock();
-        Collection<V> tmpColl = new ArrayList<>();
+        Collection<V> result = new ArrayList<>();
         for (SuperEntry<K, V> pair : superCache) {
-            tmpColl.add(pair.getValue());
+            result.add(pair.getValue());
         }
         locker.releaseReadLock();
-        return tmpColl;
+        return result;
     }
 
     @NotNull
     @Override
     public Set<Entry<K, V>> entrySet() {
         locker.acquireReadLock();
-        Set<Entry<K, V>> tmpSet = new HashSet<>(superCache);
+        Set<Entry<K, V>> result = new HashSet<>(superCache);
         locker.releaseReadLock();
-        return tmpSet;
+        return result;
     }
 
     @Override
@@ -210,8 +216,9 @@ public class SuperCache<K, V> implements Map<K, V> {
             K k;
             V v;
             try {
-                k = pair.getKey();
-                v = pair.getValue();
+                k = pair.key;
+                v = pair.value;
+                pair.updateLastUsed();
             } catch (IllegalStateException e) {
                 throw new ConcurrentModificationException("Crash forEach", e);
             }
@@ -221,23 +228,15 @@ public class SuperCache<K, V> implements Map<K, V> {
     }
 
     public synchronized V getOrCompute(K key, Supplier<V> valueSupplier) {
-        locker.acquireReadLock();
+        locker.acquireWriteLock();
         if (this.containsKey(key)) {
-            V tmp = this.get(key);
-            locker.releaseReadLock();
-            return tmp;
+            V result = this.get(key);
+            locker.releaseWriteLock();
+            return result;
         }
-        locker.releaseReadLock();
         this.put(key, valueSupplier.get());
+        locker.releaseWriteLock();
         return null;
-    }
-
-    public int getMaxSize() {
-        return maxSize;
-    }
-
-    public long getTtl() {
-        return ttl;
     }
 
     public static class SuperEntry<K, V> implements Entry<K, V> {
@@ -261,6 +260,10 @@ public class SuperCache<K, V> implements Map<K, V> {
             return Objects.equals(o1, o2);
         }
 
+        public long getLastUsed() {
+            return lastUsed;
+        }
+
         private void updateLastUsed() {
             this.lastUsed = System.currentTimeMillis();
         }
@@ -282,10 +285,6 @@ public class SuperCache<K, V> implements Map<K, V> {
             return oldValue;
         }
 
-        public long getLastUsed() {
-            return lastUsed;
-        }
-
         public boolean equals(Object o) {
             if (!(o instanceof Map.Entry))
                 return false;
@@ -302,16 +301,15 @@ public class SuperCache<K, V> implements Map<K, V> {
             updateLastUsed();
             return key + "=" + value;
         }
-
     }
 
     private class Watcher implements Runnable {
 
+        private boolean running = true;
+
         private void breakLoop() {
             this.running = false;
         }
-
-        private boolean running = true;
 
         @Override
         public void run() {
@@ -319,10 +317,9 @@ public class SuperCache<K, V> implements Map<K, V> {
                 locker.acquireReadLock();   // up from 306
                 Iterator<SuperEntry<K, V>> elementsIterator
                         = superCache.iterator();
-
                 while (elementsIterator.hasNext()) {
                     SuperEntry<K, V> elem = elementsIterator.next();
-                    long lastUsedTime = elem.getLastUsed();
+                    long lastUsedTime = elem.lastUsed;
                     long currentTime = System.currentTimeMillis();
                     long actualTime = currentTime - lastUsedTime;
 
@@ -334,7 +331,7 @@ public class SuperCache<K, V> implements Map<K, V> {
                 }
                 locker.releaseReadLock();
                 try {
-                    Thread.sleep(TTL_GAP);
+                    Thread.sleep(WATCHER_DELAY);
                 } catch (InterruptedException e) {
                     throw new RuntimeException("Crash watcher", e);
                 }

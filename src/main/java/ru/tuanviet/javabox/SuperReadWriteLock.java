@@ -41,7 +41,7 @@ public class SuperReadWriteLock {
         long tmpId = Thread.currentThread().getId();
         id_write.add(tmpId);
         while (isWrite || isRead) {
-            if (id_read.contains(tmpId)) {
+            if ((numberOfReaders == 1 && id_read.contains(tmpId)) || id_write.contains(tmpId)) {
                 break;
             }
             try {

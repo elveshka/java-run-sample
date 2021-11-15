@@ -93,7 +93,6 @@ class ObjectReturn<T> implements Supplier<T> {
         this.t = t;
     }
 
-
     @Override
     public T get() {
         return t;
