@@ -41,7 +41,7 @@ public class SuperCacheTest {
     public void shouldGetOrComputeWorkGet() {
         sutSuperCache = new SuperCache<>(1000);
         sutSuperCache.put("01", "Test01");
-        String test = sutSuperCache.getOrCompute("01", new StringReturn<>("Test02"));
+        String test = sutSuperCache.getOrCompute("01", new ObjectReturn<>("Test02"));
         assertThat(test).isEqualTo("Test01");
     }
 
@@ -49,7 +49,7 @@ public class SuperCacheTest {
     public void shouldGetOrComputeWorkCompute() {
         sutSuperCache = new SuperCache<>(1000);
         sutSuperCache.put("01", "Test01");
-        String test = sutSuperCache.getOrCompute("02", new StringReturn<>("Test02"));
+        String test = sutSuperCache.getOrCompute("02", new ObjectReturn<>("Test02"));
         assertThat(test).isNull();
         assertThat(sutSuperCache.containsValue("Test02")).isTrue();
     }
@@ -86,10 +86,10 @@ public class SuperCacheTest {
     }
 }
 
-class StringReturn<T> implements Supplier<T> {
+class ObjectReturn<T> implements Supplier<T> {
     T t;
 
-    public StringReturn(T t) {
+    public ObjectReturn(T t) {
         this.t = t;
     }
 
