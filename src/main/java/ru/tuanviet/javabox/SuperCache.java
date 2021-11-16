@@ -38,6 +38,11 @@ public class SuperCache<K, V> implements Map<K, V> {
         return superCache;
     }
 
+    private void updateLastUse(SuperEntry<K, V> entry) {
+        superCache.remove(entry);
+        superCache.add(entry);
+    }
+
     @Override
     public int size() {
         locker.acquireReadLock();
@@ -241,9 +246,9 @@ public class SuperCache<K, V> implements Map<K, V> {
 
     public static class SuperEntry<K, V> implements Entry<K, V> {
 
-        private final K key;
-        private V value;
-        private long lastUsed;
+        final K key;
+        V value;
+        long lastUsed;
 
         public SuperEntry(K key, V value) {
             this.key = key;
@@ -264,8 +269,9 @@ public class SuperCache<K, V> implements Map<K, V> {
             return lastUsed;
         }
 
-        private void updateLastUsed() {
+        public void updateLastUsed() {
             this.lastUsed = System.currentTimeMillis();
+
         }
 
         public K getKey() {
@@ -288,7 +294,7 @@ public class SuperCache<K, V> implements Map<K, V> {
         public boolean equals(Object o) {
             if (!(o instanceof Map.Entry))
                 return false;
-            Map.Entry<?, ?> e = (Map.Entry<?, ?>) o;
+            Entry<?, ?> e = (Entry<?, ?>) o;
             return eq(key, e.getKey()) && eq(value, e.getValue());
         }
 
@@ -340,3 +346,4 @@ public class SuperCache<K, V> implements Map<K, V> {
         }
     }
 }
+
