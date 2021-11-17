@@ -2,6 +2,8 @@ package ru.tuanviet.javabox;
 
 import org.junit.Test;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.function.Supplier;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -10,18 +12,7 @@ public class SuperCacheTest {
     private SuperCache<String, String> sutSuperCache;
 
     @Test
-    public void shouldCreateWithInputMaxsize() {
-        sutSuperCache = new SuperCache<>(1000, 5);
-
-        int testInt = sutSuperCache.getMaxSize();
-        assertThat(testInt).isEqualTo(5);
-
-        long testLong = sutSuperCache.getTtl();
-        assertThat(testLong).isEqualTo(1000);
-    }
-
-    @Test
-    public void shouldPutWork() {
+    public void shouldPutAnElement() {
         sutSuperCache = new SuperCache<>(1000);
         sutSuperCache.put("01", "Test01");
         assertThat(sutSuperCache.size()).isEqualTo(1);
@@ -33,16 +24,27 @@ public class SuperCacheTest {
         sutSuperCache.put("01", "Test01");
         sutSuperCache.put("02", "Test02");
         sutSuperCache.put("03", "Test03");
-        sleep(200);
+        sleep(110);
         assertThat(sutSuperCache.size()).isEqualTo(0);
     }
 
     @Test
-    public void shouldGetOrComputeWorkGet() {
-        sutSuperCache = new SuperCache<>(1000);
+    public void shouldNotDeleteOneElement() {
+        sutSuperCache = new SuperCache<>(100);
         sutSuperCache.put("01", "Test01");
-        String test = sutSuperCache.getOrCompute("01", new ObjectReturn<>("Test02"));
-        assertThat(test).isEqualTo("Test01");
+        sutSuperCache.put("02", "Test02");
+        sutSuperCache.put("03", "Test03");
+        sleep(50);
+        System.out.println(sutSuperCache.put("02", "keep me"));
+        sleep(60);
+        System.out.println(sutSuperCache.size());
+        System.out.println(sutSuperCache.values());
+//        assertThat(sutSuperCache.values().toArray()[0]).isEqualTo("keep me");
+    }
+
+    @Test
+    public void testtest() {
+
     }
 
     @Test
@@ -55,26 +57,15 @@ public class SuperCacheTest {
     }
 
     @Test
-    public void shouldUpdateLastUsedParameter() {
-        sutSuperCache = new SuperCache<>(100);
-        sutSuperCache.put("keep", "alive");
-
-        for (int i = 0; i < 100; ++i) {
-            sutSuperCache.get("keep");
-            sleep(2);
+    public void shouldPutAllElements() {
+        Map<String, String> map = new HashMap<>();
+        for (int i = 0; i < 10; i++) {
+            map.put("" + i, "elem");
         }
+        sutSuperCache = new SuperCache<>(200);
+        sutSuperCache.putAll(map);
 
-        assertThat(sutSuperCache.size()).isEqualTo(1);
-    }
-
-    @Test
-    public void testTest() {
-        sutSuperCache = new SuperCache<>(199);
-        for (int i = 0; i < 100; ++i) {
-            sutSuperCache.put("" + (i + 1), "");
-            sleep(2);
-        }
-        sutSuperCache.getSuperCache().forEach(x -> System.out.println(x.getLastUsed()));
+        assertThat(sutSuperCache.size()).isEqualTo(10);
     }
 
     private void sleep(int time) {
