@@ -176,7 +176,7 @@ public class SuperCacheTest {
     }
 
     @Test
-    public void shouldKeySet() {
+    public void shouldCreateKeySet() {
         sutSuperCache = new SuperCache<>(1000);
         sutSuperCache.put("01", "Test01");
         sutSuperCache.put("02", "Test02");
@@ -186,23 +186,12 @@ public class SuperCacheTest {
     }
 
     @Test
-    public void shouldValues() {
+    public void shouldCreatValues() {
         sutSuperCache = new SuperCache<>(1000);
         sutSuperCache.put("01", "Test01");
         sutSuperCache.put("02", "Test02");
         sutSuperCache.put("03", "Test03");
         Collection<String> testValues = sutSuperCache.values();
-        // ---
-//        sutSuperCache.containsValue("somethings");
-//        sutSuperCache.get("00");
-//        sutSuperCache.remove("00");
-//        sutSuperCache.getOrCompute("01", () -> "test");
-
-//        sutSuperCache.forEach();
-//        for (SuperCache.SuperEntry<String, String> pair : test) {
-//            System.out.println(pair);
-//        }
-        // ---
         assertThat(testValues.size()).isEqualTo(3);
     }
 
