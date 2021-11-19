@@ -34,6 +34,15 @@ public class SuperCacheTest {
     }
 
     @Test
+    public void shouldEmptyAfterClear() {
+        sutSuperCache = new SuperCache<>(1000);
+        sutSuperCache.put("01", "Test01");
+        sutSuperCache.put("02", "Test02");
+        sutSuperCache.clear();
+        assertThat(sutSuperCache.size()).isEqualTo(0);
+    }
+
+    @Test
     public void shouldDeleteCacheWhenTimeUp() {
         sutSuperCache = new SuperCache<>(100);
         sutSuperCache.put("01", "Test01");
@@ -132,16 +141,6 @@ public class SuperCacheTest {
     }
 
     @Test
-    public void shouldEmptyAfterClear() {
-        sutSuperCache = new SuperCache<>(1000);
-        sutSuperCache.put("01", "Test01");
-        sutSuperCache.put("02", "Test02");
-        sutSuperCache.put("03", "Test03");
-        sutSuperCache.clear();
-        assertThat(sutSuperCache.size()).isEqualTo(0);
-    }
-
-    @Test
     public void shouldCompareByHashCodeTrue() {
         sutSuperCache = new SuperCache<>(1000);
         sutSuperCache.put("01", "Test01");
@@ -173,26 +172,6 @@ public class SuperCacheTest {
         SuperCache.SuperEntry<String, String> test = new SuperCache.SuperEntry<>(entry);
         test.setValue("keep me");
         assertThat(test.toString()).isEqualTo("00=keep me");
-    }
-
-    @Test
-    public void shouldCreateKeySet() {
-        sutSuperCache = new SuperCache<>(1000);
-        sutSuperCache.put("01", "Test01");
-        sutSuperCache.put("02", "Test02");
-        sutSuperCache.put("03", "Test03");
-        Set<String> testKeySet = sutSuperCache.keySet();
-        assertThat(testKeySet.size()).isEqualTo(3);
-    }
-
-    @Test
-    public void shouldCreatValues() {
-        sutSuperCache = new SuperCache<>(1000);
-        sutSuperCache.put("01", "Test01");
-        sutSuperCache.put("02", "Test02");
-        sutSuperCache.put("03", "Test03");
-        Collection<String> testValues = sutSuperCache.values();
-        assertThat(testValues.size()).isEqualTo(3);
     }
 
     private void sleep(int time) {
